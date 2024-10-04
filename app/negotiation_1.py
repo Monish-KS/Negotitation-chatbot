@@ -1,10 +1,10 @@
 import os
-from .pricing import Pricing
-from .sentiment import analyze_sentiment
+from pricing import Pricing
+from sentiment import analyze_sentiment
 from google.cloud import aiplatform
 from google.oauth2 import service_account
 
-# Load environment variables
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,16 +21,16 @@ class NegotiationBot:
         self.user_sentiment = None
         self.api_key = os.getenv(
             "GEMINI_API_KEY"
-        )  # Load your Gemini API key from environment
+        )  
 
     def respond_to_offer(self, user_offer):
-        # Analyze sentiment
+       
         self.user_sentiment = analyze_sentiment(user_offer)
 
-        # Update conversation history
+       
         self.conversation_history.append({"role": "customer", "content": user_offer})
 
-        # Generate response using Gemini API
+      
         prompt = self.construct_prompt(user_offer)
         bot_reply = self.get_gemini_response(prompt)
 
@@ -46,24 +46,20 @@ class NegotiationBot:
         }
         payload = {
             "prompt": prompt,
-            "model": "gemini-1.5-flash-latest",  # Replace with the specific model you want to use
+            "model": "gemini-1.5-flash-latest",  
         }
 
         response = requests.post(url, headers=headers, json=payload)
 
-        # Check if the request was successful
+   
         if response.status_code == 200:
             return response.json().get("content", "")
         else:
             print(f"Error: {response.status_code} - {response.text}")
             return "Sorry, I couldn't process your request."
 
-
     def construct_prompt(self, user_offer):
         counter_offer = self.pricing.get_counter_offer(user_offer, self.user_sentiment)
         system_prompt = f"You are a supplier negotiating the price of {self.product_name}. Your current offer is ${counter_offer:.2f}. The customer's offer was: {user_offer}. What is your response?"
 
-        # Add more context if necessary based on your conversation history
         return system_prompt
-
-

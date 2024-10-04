@@ -1,32 +1,51 @@
 # app/main.py
 import os
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel 
+from pydantic import BaseModel
 import google.generativeai as genai
 from dotenv import load_dotenv
+from negotiation_1 import NegotiationBot
+from textblob import TextBlob
 
-# Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Negotiation Chatbot API")
 
-# In-memory store for negotiations (use a database for production)
+
 negotiations = {}
 
 
 class NegotiationResponse(BaseModel):
     message: str
-    bot_message: str = None  # For responses specifically from the bot
-    user_message: str = None  # For user messages
-
+    bot_message: str = None  
+    user_message: str = None  
 
 class UserOffer(BaseModel):
     negotiation_id: str
     user_offer: float
+    user_message: str 
 
 
 class NegotiationResponse(BaseModel):
     message: str
+
+
+class InitiateNegotiationRequest(BaseModel):
+    negotiation_id: str
+    product_name: str
+    base_price: float
+
+
+def analyze_sentiment(user_message: str) -> str:
+
+    analysis = TextBlob(user_message)
+
+    if analysis.sentiment.polarity > 0:
+        return "positive"
+    elif analysis.sentiment.polarity < 0:
+        return "negative"
+    else:
+        return "neutral"
 
 
 class NegotiationBot:
@@ -34,7 +53,7 @@ class NegotiationBot:
         self.product_name = product_name
         self.base_price = base_price
 
-        # Configure the generative AI model
+
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         self.model = genai.GenerativeModel("gemini-pro")
 
@@ -47,15 +66,16 @@ class NegotiationBot:
         """
         return self.get_gemini_response(prompt)
 
-    def respond_to_offer(self, user_offer):
+    def respond_to_offer(self, user_offer, sentiment):
         prompt = f"""
         You are a negotiation bot selling {self.product_name}.
         The base price is ${self.base_price}.
-        The user has offered ${user_offer}.
+        The user has offered ${user_offer} and their sentiment is {sentiment}.
         Provide a reasonable counteroffer or accept the offer if it's close enough to the base price.
-        Respond in a friendly, professional manner.
+        Respond in a friendly, professional manner considering the user's sentiment.
         """
         return self.get_gemini_response(prompt)
+
 
     def get_gemini_response(self, prompt):
         try:
@@ -83,11 +103,16 @@ def make_offer(offer: UserOffer):
     if not bot:
         raise HTTPException(status_code=404, detail="Negotiation ID not found.")
 
-    bot_reply = bot.respond_to_offer(offer.user_offer)
+ 
+    sentiment = analyze_sentiment(offer.user_message)
+    bot_reply = bot.respond_to_offer(
+        offer.user_offer, sentiment
+    )  
+
     return NegotiationResponse(message=bot_reply)
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8080)

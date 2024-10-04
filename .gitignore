@@ -1,1 +1,4 @@
 .env
+app/negotiation.py
+app/pricing.py
+app/sentiment.py

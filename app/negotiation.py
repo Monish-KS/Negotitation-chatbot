@@ -2,7 +2,6 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 
@@ -11,7 +10,6 @@ class NegotiationBot:
         self.product_name = product_name
         self.base_price = base_price
 
-        # Configure the generative AI model
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         self.model = genai.GenerativeModel("gemini-pro")
 
@@ -33,14 +31,14 @@ class NegotiationBot:
             return f"Error: {str(e)}"
 
 
-# Create a NegotiationBot instance
+
 product_name = "Headphones"
 base_price = 100.0
 negotiation_bot = NegotiationBot(product_name, base_price)
 
-# Negotiation loop
+
 while True:
-    # Get user offer
+
     user_offer = float(input("Enter your offer (or 'quit' to end): "))
 
     if user_offer == "quit":
